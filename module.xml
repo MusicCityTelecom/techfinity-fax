@@ -1,0 +1,30 @@
+<module>
+  <rawname>tffax</rawname>
+  <repo>extended</repo>
+  <name>Fax Platform</name>
+  <version>16.0.2</version>
+  <publisher>Tommy Heggie</publisher>
+  <license>GPLv3+</license>
+  <licenselink>https://www.gnu.org/licenses/gpl-3.0.txt</licenselink>
+  <category>Applications</category>
+  <menuitems>
+    <tffax>Fax Platform</tffax>
+  </menuitems>
+  <description>Open-source multi-user fax management for FreePBX 16 and 17 with inbound DID/CID routing, outbound faxing, email delivery and notifications, editable cover pages, per-user sender profiles, a standalone user portal, timezone-aware display, administrator-managed email templates, diagnostics, and fax transport controls.</description>
+  <depends>
+    <version>16.0</version>
+  </depends>
+  <supported>
+    <version>16.0</version>
+    <version>17.0</version>
+  </supported>
+  <hooks>
+    <framework class="Destinations" namespace="FreePBX">
+      <method callingMethod="getModuleDestinations" class="Tffax" namespace="FreePBX\modules">destinations</method>
+      <method callingMethod="getModuleCheckDestinations" class="Tffax" namespace="FreePBX\modules">destinations_check</method>
+      <method callingMethod="getModuleDestinationInfo" class="Tffax" namespace="FreePBX\modules">destinations_getdestinfo</method>
+      <method callingMethod="changeModuleDestination" class="Tffax" namespace="FreePBX\modules">destinations_change</method>
+      <method callingMethod="identifyDestinations" class="Tffax" namespace="FreePBX\modules">destinations_identif</method>
+    </framework>
+  </hooks>
+</module>

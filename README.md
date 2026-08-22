@@ -1,56 +1,43 @@
-# TechFinity Fax
+# Fax Platform for FreePBX
 
-TechFinity Fax is an open-source multi-user fax platform module for FreePBX 16 and 17. It uses Asterisk `res_fax` / `res_fax_spandsp` for fax transport and FreePBX User Management for end-user authentication.
+Fax Platform is an open-source multi-user fax management module for FreePBX 16 and 17. It provides inbound and outbound faxing through Asterisk `res_fax`, DID/CID-based routing, per-user fax accounts, email delivery and notifications, cover pages, history, diagnostics, and a standalone `/fax/` user portal.
 
-**Current public version:** 16.0.1  
-**Author:** Robert Thomas Heggie (Tommy)  
+**Version:** 16.0.2  
+**Author:** Tommy Heggie  
 **Email:** tommy@techfinity.tech  
 **License:** GPL-3.0-or-later
 
-## Release downloads
-
-The first public release artifacts are stored under `releases/16.0.1/`:
-
-- `tffax-16.0.1.tar.gz` — Module Admin installation package
-- `tffax-16.0.1-src.zip` — complete source archive
-- `tffax-16.0.1-SHA256SUMS.txt` — SHA-256 checksums
-
-## User portal
-
-After installation, users access the fax portal at:
-
-```text
-https://PBX-HOSTNAME-OR-IP/fax/
-```
-
-Users sign in with their existing **FreePBX User Management** username and password. TechFinity Fax does not create, store, verify, reset, or change a second fax password. Administrators grant fax access and permissions to an existing User Management account.
-
 ## Features
 
-- User Management authentication
-- Per-user fax authorization and permissions
-- Inbound fax mailboxes with DID/CID routing
-- Automatic DID normalization for common 10-digit, 11-digit and `+1` NANP formats
-- Unassigned Inbox fallback for unmatched inbound fax calls
-- Inbound fax email notifications and PDF delivery
-- Outbound PDF/image fax submission
-- Per-user outbound identity and caller-ID selection
-- Fax history, preview and download
-- Cover page templates
-- Administrator-editable email templates for inbound, outbound success and outbound failure
-- Timezone-aware display and notifications; default `America/Chicago`
-- T.38 / G.711 fax transport policy controls
-- Diagnostics and configurable fax-engine settings
-- Default FreePBX/Bootstrap styling in the administration interface
+- Multi-user fax accounts and permissions
+- Standalone `/fax/` user portal
+- Dedicated inbound fax mailboxes
+- Automatic DID/CID routing with unassigned-inbox fallback
+- Inbound fax email delivery with PDF attachment
+- Outbound fax submission and status tracking
+- Cover-page-only faxing
+- Editable global and personal cover-page templates
+- Live outbound and cover-page preview
+- Per-user sender/company/contact information
+- Per-user outbound fax number / caller-ID request
+- Email notifications for inbound, success, and failure events
+- Administrator-editable notification templates
+- Configurable timezone; default `America/Chicago`
+- T.38/G.711 fax transport policy controls
+- Fax diagnostics and dependency checks
+- Classic and Refined interface themes
 
 ## Requirements
 
 - FreePBX 16 or 17
-- FreePBX User Management (`userman`)
-- Asterisk with `res_fax` and a fax technology module such as `res_fax_spandsp`
-- Ghostscript and TIFF/PDF utilities used by the document conversion workflow
+- Asterisk with `res_fax`
+- A fax technology module such as `res_fax_spandsp`
+- Ghostscript (`gs`)
+- TIFF utilities including `tiff2pdf` and `tiffinfo`
+- A working outbound route/trunk for fax destinations
+- Inbound DIDs routed to the module for inbound fax reception
 
-Before production use, verify:
+Verify the fax engine before production use:
 
 ```bash
 asterisk -rx 'module show like fax'
@@ -59,42 +46,70 @@ asterisk -rx 'core show application ReceiveFAX'
 command -v gs tiff2pdf tiffinfo
 ```
 
-## Installation through Module Admin
+## Installation
 
-1. Download `releases/16.0.1/tffax-16.0.1.tar.gz`.
+### Module Admin
+
+1. Download the release tarball `tffax-16.0.2.tar.gz`.
 2. Open **Admin > Module Admin**.
-3. Choose **Upload Modules** and upload the tarball.
-4. Install/enable **TechFinity Fax**.
+3. Select **Upload Modules** and upload the tarball.
+4. Install and enable **Fax Platform**.
 5. Click **Apply Config**.
-6. Open **Applications > TechFinity Fax > Diagnostics** and resolve any failed checks before production use.
+6. Open **Applications > Fax Platform > Diagnostics** and resolve any failed checks.
 
-The module declares User Management as a module dependency. Its installer creates only `tffax_*` database tables, the module-owned fax spool, the module dialplan contexts, and the `/fax/` portal wrapper.
+### CLI
+
+```bash
+fwconsole ma downloadinstall /path/to/tffax-16.0.2.tar.gz
+fwconsole reload
+```
+
+If your FreePBX build does not accept a local path with `downloadinstall`, upload/extract the module to the FreePBX modules directory and use the normal Module Admin installation workflow.
 
 ## Basic configuration
 
 1. Create one or more **Fax Identities**.
-2. Map existing User Management accounts under **Fax Users**.
-3. Create **Inbound Mailboxes** and assign users.
-4. Route a dedicated inbound DID directly to a mailbox, or point an inbound route to **TechFinity Fax > Automatic DID/CID Router** and create routing rules.
-5. Configure **Settings**, including T.38 policy, rates, timezone and notification sender.
-6. Customize notification text under **Email Templates**.
+2. Create a **Fax Account** for each user. Account creation can also create the user's managed inbound mailbox and DID routing in one step.
+3. For shared or advanced configurations, use **Inbound Mailboxes**, **Fax Users**, and **Advanced Routing**.
+4. Point a FreePBX inbound route to either a dedicated Fax Platform mailbox or **Automatic DID/CID Router**.
+5. Configure outbound settings, timezone, transport policy, and notification sender under **Settings**.
+6. Customize cover pages and email notification templates as needed.
 7. Apply configuration after routing, mailbox, identity, or fax-engine changes.
 
-## Data and paths
+## User portal
+
+After installation, the portal is available at:
+
+```text
+https://PBX-HOSTNAME-OR-IP/fax/
+```
+
+Fax portal credentials are managed by Fax Platform administrators. Users can manage their sender profile, notification preferences, personal cover pages, and portal password from the portal settings page.
+
+## Data owned by the module
 
 - Module ID: `tffax`
 - Database tables: `tffax_*`
-- Default fax spool: `/var/spool/asterisk/tffax`
-- User portal: `/fax/`
+- Default spool: `/var/spool/asterisk/tffax`
+- Public portal: `/fax/`
 - Administration: `/admin/config.php?display=tffax`
 - Dialplan contexts: `tffax-router`, `tffax-inbound`, `tffax-tx`
 
-TechFinity Fax does not intentionally modify unrelated modules or their database tables.
+The module is designed to avoid modifying unrelated module tables or configuration.
 
-## License and trademarks
+## Security
 
-Copyright (C) 2026 Robert Thomas Heggie / TechFinity Communications LLC.
+- Restrict PBX administration and the fax portal to trusted networks or a properly secured remote-access path.
+- Use TLS for the web interface.
+- Use strong portal passwords.
+- Treat stored faxes as potentially sensitive documents and protect backups accordingly.
+- Keep FreePBX, Asterisk, PHP, the operating system, and this module updated.
+- Review the module's Diagnostics page after upgrades.
 
-This project is licensed under the GNU General Public License version 3 or, at your option, any later version. See `LICENSE` in the source package.
+## License
 
-FreePBX and Sangoma are trademarks of their respective owners. TechFinity Fax is an independent open-source project and is not affiliated with or endorsed by Sangoma Technologies.
+Copyright (C) 2026 Tommy Heggie.
+
+This project is licensed under the GNU General Public License version 3 or, at your option, any later version. See `LICENSE`.
+
+FreePBX and Sangoma are trademarks of their respective owners. This project is independent and is not affiliated with or endorsed by Sangoma Technologies.

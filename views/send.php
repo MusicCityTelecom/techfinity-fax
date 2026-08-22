@@ -1,0 +1,11 @@
+<div class="tffax-panel tffax-form-panel"><h2>Send Fax</h2><p class="text-muted">Create a fax, optional cover page and PDF preview. Save as a draft or queue immediately.</p>
+<?php if(!$identities): ?><div class="alert alert-warning">Create an enabled Fax Identity before sending your first fax.</div><?php else: ?>
+<form method="post" action="config.php?display=tffax&view=send" enctype="multipart/form-data">
+<div class="row"><div class="col-md-6 form-group"><label>Fax Number</label><input class="form-control" name="fax_number" placeholder="16155551212"></div><div class="col-md-6 form-group"><label>Send From</label><select class="form-control" name="identity_id" required><?php foreach($identities as $i):?><option value="<?=$i['id']?>"><?=htmlspecialchars($i['name'].' — '.$i['fax_number'])?></option><?php endforeach;?></select></div></div>
+<div class="row"><div class="col-md-6 form-group"><label>Recipient Name</label><input class="form-control" name="recipient_name"></div><div class="col-md-6 form-group"><label>Recipient Company</label><input class="form-control" name="recipient_company"></div></div>
+<div class="form-group"><label>Subject</label><input class="form-control" name="subject"></div>
+<div class="form-group"><label>Cover Page</label><select class="form-control" name="coverpage_id"><option value="0">No cover page</option><?php foreach($coverpages as $c):?><option value="<?=$c['id']?>"><?=htmlspecialchars($c['name'])?></option><?php endforeach;?></select></div>
+<div class="form-group"><label>Cover Page Message / Notes</label><textarea class="form-control" name="notes" rows="5"></textarea></div>
+<div class="form-group"><label>Document</label><input type="file" class="form-control" name="document" accept=".pdf,.tif,.tiff,.png,.jpg,.jpeg"><p class="help-block">Optional when a cover page is selected. You may send a cover page by itself. A PDF archive/preview is generated when the draft/job is created; TIFF is generated separately for Asterisk SendFAX.</p></div>
+<div class="tffax-form-actions"><button class="btn btn-default" type="submit" name="tffax_action" value="save_draft"><i class="fa fa-save"></i> Save Draft</button> <button class="btn btn-primary" type="submit" name="tffax_action" value="send_fax"><i class="fa fa-paper-plane"></i> Queue Fax</button></div>
+</form><?php endif; ?></div>
