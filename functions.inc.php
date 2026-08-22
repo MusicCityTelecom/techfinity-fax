@@ -1,29 +1,33 @@
 <?php
-// Traditional module hook remains for broad compatibility with host releases that
-// call module get_config hooks from functions.inc.php.
 function tffax_get_config($engine) {
-    global $ext;
-    if (strtolower((string)$engine) !== 'asterisk') { return; }
-    if (!isset($ext) || !is_object($ext)) { return; }
+    static $tffaxGenerated = false;
+    if ($engine !== 'asterisk' || $tffaxGenerated) { return; }
+    $tffaxGenerated = true;
+    global $ext, $amp_conf;
+    $tffaxWebroot = rtrim((string)($amp_conf['AMPWEBROOT'] ?? '/var/www/html'), '/');
+    $tffaxBinDir = $tffaxWebroot . '/admin/modules/tffax/bin';
     $m = FreePBX::Tffax();
 
     // These contexts are entirely owned by Fax Platform.  Mark them no-custom
-    // so generated dialplan does not warn about non-existent *-custom contexts.
-    if (method_exists($ext,'set_no_custom')) { foreach (['tffax-router','tffax-inbound','tffax-tx'] as $c) { $ext->set_no_custom($c); } }
+    // so the host framework does not emit misleading "nonexistent *-custom" warnings.
+    if (method_exists($ext, 'addSectionNoCustom')) {
+        foreach (['tffax-router','tffax-inbound','tffax-tx'] as $ctx) { $ext->addSectionNoCustom($ctx, true); }
+    }
 
-    $routes = $m->getRoutes();
-    $destinations = $m->getDestinations();
     $spool = $m->getSetting('spool_dir', '/var/spool/asterisk/tffax');
-    $tffaxBinDir = defined('AMPWEBROOT') ? rtrim(AMPWEBROOT,'/').'/admin/modules/tffax/bin' : '/var/www/html/admin/modules/tffax/bin';
+    $destinations = $m->getDestinations();
+    $enabledDestinationIds = [];
+    foreach ($destinations as $mailbox) { if (!empty($mailbox['enabled'])) { $enabledDestinationIds[(int)$mailbox['id']] = true; } }
 
-    // Automatic DID/CID router. FreePBX routes the call here as an ordinary
-    // module destination. Capture the original inbound metadata before we jump.
+    // Generic automatic router. Any Inbound Route may point here.
+    // FROM_DID is preserved by Core on inbound DID routes; CALLERID(dnid) is
+    // used as a fallback for unusual carriers/configurations.
     $ext->add('tffax-router', 's', '', new ext_noop('Fax Platform automatic DID/CID router'));
-    $ext->add('tffax-router', 's', '', new ext_set('TFFAX_DID', '${IF($["${FROM_DID}"!=""]?${FROM_DID}:${EXTEN})}'));
+    $ext->add('tffax-router', 's', '', new ext_set('TFFAX_DID', '${IF($["${FROM_DID}"!=""]?${FROM_DID}:${CALLERID(dnid)})}'));
     $ext->add('tffax-router', 's', '', new ext_set('TFFAX_CID', '${CALLERID(num)}'));
-    foreach ($routes as $r) {
-        if (empty($r['enabled'])) { continue; }
-        $cond = $m->routeExpression($r['did_pattern'], $r['cid_pattern']);
+    foreach ($m->getRoutes() as $r) {
+        if (empty($r['enabled']) || empty($r['destination_id']) || empty($enabledDestinationIds[(int)$r['destination_id']])) { continue; }
+        $cond = '$['.$m->buildRouteCondition($r['did_pattern'], $r['cid_pattern']).']';
         $ext->add('tffax-router', 's', '', new ext_gotoif($cond, 'tffax-inbound,'.(int)$r['destination_id'].',1'));
     }
     // Never discard an unmatched fax. Store it in the virtual Unassigned Inbox.
